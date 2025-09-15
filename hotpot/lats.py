@@ -6,6 +6,8 @@ import wikienv, wrappers
 import requests
 import logging
 import random
+from logger_config import get_context_logger, setup_logger
+from trajectory_saver import trajectory_saver
 
 env = wikienv.WikiEnv()
 env = wrappers.HotPotQAWrapper(env, split="train")
@@ -30,15 +32,15 @@ def get_value(task, x, y, n_evaluate_sample, cache_value=True):
     
     unique_trajectories = get_unique_trajectories(failed_trajectories)
     value_prompt = task.value_prompt_wrap(x, y, unique_trajectories, reflection_map)
-    logging.info(f"Current: {x}")
-    logging.info(f"Current: {y}")
+    logger = get_context_logger()
+    logger.debug(f"Evaluating trajectory: {y[:100]}...")
     if cache_value and value_prompt in task.value_cache:
         return task.value_cache[value_prompt]
-    logging.info(f"VALUE PROMPT: {value_prompt}")
+    logger.debug(f"VALUE PROMPT: {value_prompt[:200]}...")
     value_outputs = gpt(value_prompt, n=n_evaluate_sample, stop=None)
-    logging.info(f"VALUE OUTPUTS: {value_outputs}")
+    logger.debug(f"VALUE OUTPUTS: {value_outputs}")
     value = task.value_outputs_unwrap(value_outputs)
-    logging.info(f"VALUES: {value}")
+    logger.debug(f"Computed value: {value}")
     if cache_value:
         task.value_cache[value_prompt] = value
     return value
@@ -68,7 +70,8 @@ def get_samples(task, x, y, n_generate_sample, prompt_sample, stop):
         prompt = task.cot_prompt_wrap(x, y, reflection_map)
     else:
         raise ValueError(f'prompt_sample {prompt_sample} not recognized')
-    logging.info(f"PROMPT: {prompt}")
+    logger = get_context_logger()
+    logger.debug(f"Generation prompt: {prompt[:200]}...")
     samples = gpt(prompt, n=n_generate_sample, stop=stop)
     return [y + _ for _ in samples]
 
@@ -160,20 +163,29 @@ def lats_search(args, task, idx, iterations=30, to_print=True):
     global gpt
     global failed_trajectories
     global reflection_map
+    
+    # Setup logger for this experiment run
+    logger = setup_logger(args.log, debug_mode=True)
+    ctx_logger = get_context_logger(iteration=0, node_depth=0)
+    
     gpt = partial(gpt, model=args.backend, temperature=args.temperature)
     x = env.reset(idx=idx)
+    
     if to_print:
         print(idx, x)
+    
+    ctx_logger.info(f"Starting LATS search for question {idx}: {x[:100]}...")
+    
     root = Node(state=None, question=x)
     all_nodes = []
     failed_trajectories = []
     terminal_nodes = []
     reflection_map = []
-    logging.basicConfig(filename=args.log, level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s', filemode='a')
 
     for i in range(iterations):
-        logging.info(f"Iteration {i + 1}...")
-        node = select_node(root)
+        ctx_logger = get_context_logger(iteration=i+1)
+        ctx_logger.info(f"Starting iteration {i + 1}/{iterations}")
+        node = select_node(root, i+1)
 
         while node is None or (node.is_terminal and node.reward != 1):
             logging.info(f"Need to backtrack or terminal node with reward 0 found at iteration {i + 1}, reselecting...")
@@ -187,12 +199,12 @@ def lats_search(args, task, idx, iterations=30, to_print=True):
             logging.info(f"Terminal node with reward 1 found at iteration {i + 1}")
             return node.state, node.value, all_nodes, node.reward, node.em
         
-        expand_node(node, args, task)
+        expand_node(node, args, task, i+1)
 
         while node.is_terminal or not node.children:
-            logging.info(f"Depth limit node found at iteration {i + 1}, reselecting...")
-            node = select_node(root)
-            expand_node(node, args, task)
+            ctx_logger.debug(f"Node at depth limit or no children, reselecting...")
+            node = select_node(root, i+1)
+            expand_node(node, args, task, i+1)
 
         value = evaluate_node(node, args, task)
         # Find the child with the highest value
@@ -223,23 +235,34 @@ def lats_search(args, task, idx, iterations=30, to_print=True):
     all_nodes_list.extend(terminal_nodes)
     best_child = max(all_nodes_list, key=lambda x: x.reward)
     failed_trajectories = []
+    # Save final trajectory (successful or failed)
+    final_trajectory_nodes = []
+    current = best_child
+    while current:
+        final_trajectory_nodes.insert(0, current)
+        current = current.parent
+    trajectory_saver.add_trajectory(x, final_trajectory_nodes, 
+                                  best_child.state.get('action', ''), 
+                                  best_child.reward, best_child.em, iterations, idx)
+    
+    ctx_logger = get_context_logger()
     if best_child.reward == 1:
-        logging.info("Successful trajectory found")
+        ctx_logger.info("✅ Final result: SUCCESSFUL trajectory found")
     else:
-        logging.info("Unsuccessful trajectory found")
+        ctx_logger.info("❌ Final result: No successful trajectory found")
     if best_child is None:
         best_child = root
     return best_child.state, best_child.value, all_nodes, best_child.reward, best_child.em
 
-def select_node(node):
+def select_node(node, iteration=None):
+    ctx_logger = get_context_logger(iteration=iteration)
     while node and node.children:
-        logging.info(f"Selecting from {len(node.children)} children at depth {node.depth}.")
+        ctx_logger.debug(f"Selecting from {len(node.children)} children at depth {node.depth}")
         
         terminal_children = [child for child in node.children if child.is_terminal]
-        terminal_status = [child.is_terminal for child in node.children]
         
         if len(terminal_children) == len(node.children):
-            logging.info(f"All children are terminal at depth {node.depth}. Backtracking...")
+            ctx_logger.debug(f"All children terminal at depth {node.depth}, backtracking...")
             if node.parent:  
                 node.parent.children.remove(node)
             node = node.parent  
@@ -247,35 +270,40 @@ def select_node(node):
         
         node_with_reward_1 = next((child for child in terminal_children if child.reward == 1), None)
         if node_with_reward_1:
-            logging.info(f"Found terminal node with reward 1 at depth {node.depth}.")
+            ctx_logger.debug(f"Found successful terminal node at depth {node.depth}")
             return node_with_reward_1
         
         node = max((child for child in node.children if not child.is_terminal), key=lambda child: child.uct(), default=None)
 
-        while node.is_terminal and node.reward != 1:
+        while node and node.is_terminal and node.reward != 1:
             node = max((child for child in node.parent.children if not child.is_terminal), key=lambda child: child.uct(), default=None)
             
-        logging.info(f"Selected node at depth {node.depth} with UCT {node.uct()}.")
+        if node:
+            ctx_logger.debug(f"Selected node at depth {node.depth} with UCT {node.uct():.3f}")
         
     return node  # This will return None if all paths from the root are exhausted
 
-def expand_node(node, args, task):
+def expand_node(node, args, task, iteration=None):
+    ctx_logger = get_context_logger(iteration=iteration, node_depth=node.depth)
     if node.depth >= 7:
-        logging.info("Depth limit reached")
-        print("Depth limit reached")
+        ctx_logger.debug(f"Depth limit reached at depth {node.depth}")
         node.is_terminal = True
         return
-    new_nodes = generate_new_states(node, args, task, args.n_generate_sample)
+    
+    ctx_logger.debug(f"Expanding node at depth {node.depth} with {args.n_generate_sample} samples")
+    new_nodes = generate_new_states(node, args, task, args.n_generate_sample, iteration)
     node.children.extend(new_nodes)
+    ctx_logger.debug(f"Generated {len(new_nodes)} new child nodes")
 
 def rollout(node, args, task, idx, max_depth=4):
-    logging.info("ROLLING OUT")
+    ctx_logger = get_context_logger(node_depth=node.depth)
+    ctx_logger.debug(f"Starting rollout from depth {node.depth}")
     depth = node.depth
     n = 5
     rewards = [0]
     while not node.is_terminal and depth < max_depth:
         # Generate new states
-        logging.info(f"ROLLING OUT {depth}")
+        ctx_logger.debug(f"Rollout step at depth {depth}")
         new_states = []
         values = []
         while len(new_states) == 0:
@@ -296,14 +324,15 @@ def rollout(node, args, task, idx, max_depth=4):
         if depth == max_depth:
             rewards = [-1]
     
-    logging.info("ROLLOUT FINISHED")
+    ctx_logger.debug(f"Rollout finished with average reward: {sum(rewards) / len(rewards):.3f}")
     return sum(rewards) / len(rewards), node
 
-def generate_new_states(node, args, task, n):
+def generate_new_states(node, args, task, n, iteration=None):
     global failed_trajectories
     prompt = generate_prompt(node)
     sampled_actions = get_samples(task, prompt, f"Thought {node.depth + 1}: ", n, prompt_sample=args.prompt_sample, stop="Observation")
-    logging.info(f"SAMPLED ACTION: {sampled_actions}")
+    ctx_logger = get_context_logger(iteration=iteration, node_depth=node.depth)
+    ctx_logger.debug(f"Generated {len(sampled_actions)} action samples")
     tried_actions = []
     
     unique_states = {}  # Store unique states here
@@ -339,8 +368,9 @@ def generate_new_states(node, args, task, n):
             if r == 1:
                 new_node.em = info.get('em')
             unique_states[unique_key] = new_node  # Add this state to unique_states
-            logging.info(f"NEW NODE: {new_node}")
-            logging.info(f"Feedback: {info}")
+            ctx_logger.debug(f"Created new node at depth {new_node.depth}: reward={r}, terminal={done}")
+            if info:
+                ctx_logger.debug(f"Environment feedback: {str(info)[:100]}...")
 
             if new_node.is_terminal and r == 0:
                 trajectory = collect_trajectory(new_node)
@@ -351,17 +381,19 @@ def generate_new_states(node, args, task, n):
     return list(unique_states.values())  # Return unique nodes as a list
 
 
-def evaluate_node(node, args, task):
+def evaluate_node(node, args, task, iteration=None):
+    ctx_logger = get_context_logger(iteration=iteration, node_depth=node.depth)
     child_prompts = [generate_prompt(child) for child in node.children if not child.is_terminal]
     votes = get_values(task, node.question, child_prompts, args.n_evaluate_sample)
     
-    logging.info(f"Length of votes: {len(votes)}")
-    logging.info(f"Length of node.children: {len(node.children)}")
+    ctx_logger.debug(f"Evaluating {len(node.children)} children, got {len(votes)} votes")
     
     # Pre-allocate votes list
     votes = votes + [0] * (len(node.children) - len(votes))
     for i, child in enumerate(node.children):
         child.value = votes[i] 
+    
+    ctx_logger.debug(f"Assigned values to children, max value: {max(votes) if votes else 0:.3f}") 
     # max_vote = max(votes) if votes else 1
     # if max_vote == 0:
     #     max_vote = 1  # Avoid division by zero
@@ -384,18 +416,27 @@ def print_tree(node, level=0):
         print_tree(child, level + 1)
 
 def backpropagate(node, value):
+    ctx_logger = get_context_logger()
+    path_depths = []
+    current = node
+    while current:
+        path_depths.append(current.depth)
+        current = current.parent
+    
+    ctx_logger.debug(f"Backpropagating value {value:.3f} through path: {path_depths[::-1]}")
+    
     while node:
         node.visits += 1
         if node.is_terminal:
             if node.reward == 0:
                 node.value = (node.value * (node.visits - 1) + (-1)) / node.visits
-                logging.info(f"Backpropagating with reward 0 at depth {node.depth}. New value: {node.value}.")
+                ctx_logger.debug(f"Terminal failure at depth {node.depth}: value={node.value:.3f}, visits={node.visits}")
             else:
                 node.value = (node.value * (node.visits - 1) + value) / node.visits
-                logging.info(f"Backpropagating with reward 1 at depth {node.depth}. New value: {node.value}.")
+                ctx_logger.debug(f"Terminal success at depth {node.depth}: value={node.value:.3f}, visits={node.visits}")
         else:
             node.value = (node.value * (node.visits - 1) + value) / node.visits
-            logging.info(f"Backpropagating at depth {node.depth}. New value: {node.value}.")
+            ctx_logger.debug(f"Internal node at depth {node.depth}: value={node.value:.3f}, visits={node.visits}")
 
         node = node.parent
 

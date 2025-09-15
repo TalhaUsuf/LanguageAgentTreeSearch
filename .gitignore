@@ -6,3 +6,11 @@ dist/
 **/logs
 .venv/
 .vscode/
+hotpot/.claude
+social_media_datastreams
+__main__.log
+hotpot/LATS_Algorithm_Explanation.md
+hotpot/hotpot_models.log
+hotpot/models.log
+debug.ipynb
+*.log

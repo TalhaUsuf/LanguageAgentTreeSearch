@@ -1,0 +1,161 @@
+# Prompt Templates for Generic LATS
+# All prompts support variable substitution using {variable_name} syntax
+
+prompts:
+  # System prompt that defines the agent's role and capabilities
+  # Variables available: {tools_description}, {task_description}
+  system_prompt: |
+    You are an advanced reasoning agent capable of solving complex tasks through systematic exploration and tool use.
+    
+    Available tools:
+    {tools_description}
+    
+    Task context:
+    {task_description}
+    
+    Use step-by-step reasoning to solve the given task.
+
+  # Chain-of-thought prompt for action generation
+  # Variables: {examples}, {tools}, {input}, {trajectory}
+  cot_prompt: |
+    Solve the task step-by-step using interleaving Thought, Action, Observation steps.
+    
+    Available tools:
+    {tools}
+    
+    Guidelines:
+    - Think about what information you need before selecting a tool
+    - Choose the most appropriate tool for each step
+    - Chain tools together to build complex solutions
+    - Interpret tool outputs carefully before proceeding
+    
+    Here are examples showing different tool usage patterns:
+    {examples}
+    
+    Current task:
+    Question: {input}
+    {trajectory}
+    
+    Provide your next Thought and Action:
+
+  # Shorter COT prompt for quick interactions
+  # Variables: {tools}, {input}, {trajectory}
+  cot_prompt_short: |
+    Solve the task using the available tools. Think step-by-step and select the most appropriate tool for each step.
+    
+    Available tools:
+    {tools}
+    
+    Task: {input}
+    Current progress:
+    {trajectory}
+    
+    What's your next thought and action?
+
+  # Reflection prompt for learning from failures (generalizable)
+  # Variables: {trajectory}, {question}, {answer}, {correct_answer}
+  reflection_prompt: |
+    You attempted to solve this task but were unsuccessful:
+    Task: {question}
+    
+    Your approach:
+    {trajectory}
+    
+    Your result: {answer}
+    Expected result: {correct_answer}
+    
+    Reflect on what went wrong:
+    1. Were the right tools selected for each step?
+    2. Was the reasoning logical and systematic? 
+    3. Were tool outputs interpreted correctly?
+    4. Was sufficient information gathered before concluding?
+    
+    In 2-3 sentences, diagnose the main reason for failure and suggest a better approach:
+
+  # Value evaluation prompt for scoring states (works with any task type)
+  # Variables: {state}, {trajectory}, {question}
+  value_prompt: |
+    Evaluate the current progress toward solving this task.
+    
+    Task: {question}
+    Current state: {state}
+    Progress so far: {trajectory}
+    
+    Consider:
+    1. How much relevant information has been gathered
+    2. Whether the right tools are being used effectively
+    3. How close the current approach is to a complete solution
+    4. If the reasoning path is logical and systematic
+    
+    Rate the likelihood of successfully completing this task from the current state (0-10):
+    0-2: Very unlikely, wrong approach or stuck
+    3-4: Low chance, some progress but major gaps
+    5-6: Moderate chance, on track but needs more work
+    7-8: High chance, most information gathered, close to solution
+    9-10: Very likely to succeed, all pieces in place
+    
+    Rating:
+
+  # Generalizable examples for different tool usage patterns
+  # These examples demonstrate diverse tool types and reasoning patterns
+  examples:
+    # Example 1: Data Analysis with Database and Calculations
+    - pattern: "data_analysis"
+      question: "What is the average salary of Engineering employees hired after 2020?"
+      trajectory: |
+        Thought 1: I need to query the database for Engineering employees hired after 2020, then calculate the average of their salaries.
+        Action 1: database_query[SELECT name, salary FROM employees WHERE department='Engineering' AND hire_date > '2020-01-01']
+        Observation 1: Found 8 employees: Alice ($85,000), Bob ($92,000), Carol ($78,000), Dave ($95,000), Eve ($88,000), Frank ($91,000), Grace ($83,000), Henry ($89,000)
+        Thought 2: Now I need to calculate the average of these 8 salaries.
+        Action 2: calculate[mean of 85000, 92000, 78000, 95000, 88000, 91000, 83000, 89000]
+        Observation 2: The mean is $87,625
+        Thought 3: The average salary of Engineering employees hired after 2020 is $87,625.
+        Action 3: finish[$87,625]
+        
+    # Example 2: Multi-Source Information Gathering
+    - pattern: "information_synthesis"
+      question: "Compare current weather in Tokyo with historical averages and provide travel advice."
+      trajectory: |
+        Thought 1: I need current weather data for Tokyo first.
+        Action 1: weather_api[Tokyo, current]
+        Observation 1: Current weather in Tokyo: 22°C, partly cloudy, humidity 65%, wind 12 km/h
+        Thought 2: Now I need historical weather data for comparison.
+        Action 2: weather_api[Tokyo, historical_average, month=October]
+        Observation 2: Historical October average in Tokyo: 18°C (range 15-21°C), humidity 70%, typical conditions: mild and dry
+        Thought 3: Let me get more context about Tokyo weather and travel conditions.
+        Action 3: web_search[Tokyo October weather travel conditions what to wear]
+        Observation 3: October is excellent for Tokyo travel. Mild temperatures, low rainfall. Recommended clothing: light layers, jacket for evenings. Peak tourist season.
+        Thought 4: Current weather (22°C) is warmer than historical average (18°C). Combined with web search info, I can provide comprehensive travel advice.
+        Action 4: finish[Current Tokyo weather (22°C) is 4°C warmer than October average (18°C). Excellent travel conditions - mild and comfortable. Recommend light layers with a jacket for evenings. Peak tourist season so expect crowds.]
+        
+    # Example 3: Complex Multi-Step Data Processing
+    - pattern: "data_processing"
+      question: "Process the sales report file, remove duplicates, and calculate quarterly revenue totals."
+      trajectory: |
+        Thought 1: I need to start by reading the sales report file to understand its structure.
+        Action 1: file_read[sales_report_2024.csv]
+        Observation 1: File contains 4,892 rows with columns: date, transaction_id, product, amount, customer_id, region. Sample data shows some potential duplicates.
+        Thought 2: I should remove duplicate transactions based on transaction_id to ensure accurate calculations.
+        Action 2: data_clean[remove_duplicates, key=transaction_id, file=sales_report_2024.csv]
+        Observation 2: Removed 147 duplicate entries. Clean dataset now has 4,745 unique transactions.
+        Thought 3: Now I need to group the data by quarter and sum the amounts for revenue totals.
+        Action 3: data_aggregate[group_by=quarter, aggregate_function=sum, column=amount, data=cleaned_sales_data]
+        Observation 3: Quarterly revenue: Q1 2024: $1,234,567, Q2 2024: $1,456,789, Q3 2024: $1,678,910, Q4 2024: $1,890,123
+        Thought 4: I have successfully processed the file and calculated the quarterly totals.
+        Action 4: finish[Processed sales report: removed 147 duplicates from 4,892 records. Quarterly revenue - Q1: $1,234,567, Q2: $1,456,789, Q3: $1,678,910, Q4: $1,890,123]
+        
+    # Example 4: API Integration with Validation
+    - pattern: "api_workflow"
+      question: "Check if the user email john.doe@example.com exists in our system and get their profile information."
+      trajectory: |
+        Thought 1: I need to validate the email format first before querying the system.
+        Action 1: validate_email[john.doe@example.com]
+        Observation 1: Email format is valid: john.doe@example.com
+        Thought 2: Now I can check if this user exists in our system.
+        Action 2: user_lookup_api[email=john.doe@example.com]
+        Observation 2: User found - ID: 12345, Name: John Doe, Status: Active, Last login: 2024-10-20
+        Thought 3: Let me get the complete profile information for this user.
+        Action 3: get_user_profile[user_id=12345]
+        Observation 3: Profile data: John Doe, john.doe@example.com, Member since: 2022-03-15, Subscription: Premium, Preferences: notifications_enabled=true, timezone=UTC-5
+        Thought 4: I have successfully found the user and retrieved their complete profile.
+        Action 4: finish[User john.doe@example.com exists in system. Profile: John Doe (ID: 12345), Premium member since March 2022, Active status, Last login: Oct 20, 2024]

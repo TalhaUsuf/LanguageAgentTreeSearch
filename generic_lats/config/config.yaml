@@ -1,0 +1,143 @@
+# Main Configuration File for Generic LATS
+# This file contains all the settings needed to run the LATS algorithm
+
+# LLM Configuration
+llm:
+  # Provider type: "openai", "openai-compatible", "anthropic", "langchain-custom"
+  provider: "openai-compatible"
+  
+  # Base URL for API endpoint (use environment variable substitution)
+  # For OpenAI: https://api.openai.com/v1
+  # For local/custom: your endpoint URL
+  base_url: "${OPENAI_API_BASE}"
+  
+  # Model name/identifier
+  # Examples: "gpt-4", "gpt-3.5-turbo", "llama-3.1-70b", "claude-3"
+  model: "${OPENAI_MODEL}"
+  
+  # API key (optional, can use environment variable)
+  api_key: "${OPENAI_API_KEY:}"  # Optional with default empty
+  
+  # Temperature for generation (0.0-2.0)
+  # Lower = more deterministic, Higher = more creative
+  temperature: 1.0
+  
+  # Maximum tokens per generation
+  max_tokens: 500
+  
+  # Request timeout in seconds
+  timeout: 30
+  
+  # Retry configuration
+  retry:
+    max_attempts: 3
+    backoff_factor: 2.0
+
+# Search Algorithm Configuration
+algorithm:
+  # Algorithm type: "lats", "tot", "rap"
+  type: "lats"
+  
+  # Number of iterations for tree search
+  iterations: 30
+  
+  # Number of samples to generate at each step
+  n_generate_sample: 5
+  
+  # Number of samples for value evaluation
+  n_evaluate_sample: 1
+  
+  # Search strategy for tree exploration
+  # Options: "bfs" (breadth-first), "dfs" (depth-first), "best-first"
+  search_strategy: "best-first"
+  
+  # Maximum depth of search tree
+  max_depth: 10
+  
+  # Enable caching of value evaluations
+  cache_values: true
+  
+  # Reflection settings (for LATS)
+  reflection:
+    # Enable self-reflection on failures
+    enabled: true
+    # Maximum number of unique failures to reflect on
+    max_reflections: 3
+    # Minimum failures before starting reflection
+    min_failures_for_reflection: 1
+
+# Task Configuration
+task:
+  # Task type: "hotpotqa", "custom", or any registered task
+  type: "hotpotqa"
+  
+  # Dataset configuration
+  dataset:
+    # Path to dataset file (if applicable)
+    path: "data/hotpot_dev_v1_simplified.json"
+    # Split to use: "train", "dev", "test"
+    split: "dev"
+    # Range of examples to process
+    start_index: 0
+    end_index: 100
+  
+  # Task-specific parameters
+  params:
+    # Maximum steps per episode
+    max_steps: 7
+    # Reward type: "binary", "f1_score", "custom"
+    reward_type: "binary"
+
+# Tool Configuration
+tools:
+  # Enable/disable specific tools
+  enabled_tools:
+    - "search"
+    - "lookup"
+    - "finish"
+  
+  # Tool-specific settings
+  wikipedia:
+    # API endpoint for Wikipedia
+    api_url: "https://en.wikipedia.org/w/api.php"
+    # Request timeout
+    timeout: 10
+    # Cache search results
+    cache_results: true
+  
+  # Custom tools directory (relative to config)
+  custom_tools_dir: "../tools/custom_tools"
+
+# Logging Configuration
+logging:
+  # Log level: "DEBUG", "INFO", "WARNING", "ERROR"
+  level: "INFO"
+  
+  # Log file path
+  file: "logs/lats_run.log"
+  
+  # Console output
+  console:
+    enabled: true
+    level: "INFO"
+  
+  # Log formatting
+  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+
+# Output Configuration
+output:
+  # Save trajectory data
+  save_trajectories: true
+  trajectories_dir: "trajectories"
+  
+  # Save search tree visualization
+  save_tree_viz: true
+  tree_viz_dir: "visualizations"
+  
+  # Metrics to track
+  metrics:
+    - "accuracy"
+    - "f1_score"
+    - "tokens_used"
+    - "api_calls"
+    - "search_time"

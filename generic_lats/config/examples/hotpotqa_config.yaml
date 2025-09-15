@@ -1,0 +1,159 @@
+# HotPotQA Example Configuration for Generic LATS
+# This demonstrates a complete configuration for running LATS on HotPotQA dataset
+
+# LLM Configuration
+llm:
+  # Provider type: using OpenAI-compatible API
+  provider: "openai-compatible"
+  
+  # Base URL for your LLM API endpoint
+  # Default points to the environment variable set in debug_quick.sh
+  base_url: "${OPENAI_API_BASE:http://69.48.159.10:30000/v1}"
+  
+  # Model name - should match what your API expects
+  model: "${OPENAI_MODEL:llama-3.1-70b}"
+  
+  # API key (optional if your endpoint doesn't require it)
+  api_key: "${OPENAI_API_KEY:}"
+  
+  # Temperature for text generation (0.0 = deterministic, 2.0 = very random)
+  temperature: 1.0
+  
+  # Maximum tokens per generation request
+  max_tokens: 500
+  
+  # Request timeout in seconds
+  timeout: 60
+  
+  # Retry configuration for failed requests
+  retry:
+    max_attempts: 3
+    backoff_factor: 2.0
+
+# Search Algorithm Configuration
+algorithm:
+  # Algorithm type - using LATS for this example
+  type: "lats"
+  
+  # Number of search iterations (reduced for faster debugging)
+  iterations: 30
+  
+  # Number of action samples to generate at each step
+  n_generate_sample: 5
+  
+  # Number of value evaluation samples
+  n_evaluate_sample: 1
+  
+  # Search strategy for node selection
+  search_strategy: "best-first"
+  
+  # Maximum depth of search tree (matches original implementation)
+  max_depth: 7
+  
+  # Enable caching of value evaluations to speed up search
+  cache_values: true
+  
+  # Self-reflection configuration
+  reflection:
+    # Enable learning from failed attempts
+    enabled: true
+    # Maximum number of reflections to generate
+    max_reflections: 3
+    # Start reflecting after this many failures
+    min_failures_for_reflection: 1
+
+# Task Configuration
+task:
+  # Task type - using HotPotQA
+  type: "hotpotqa"
+  
+  # Dataset configuration
+  dataset:
+    # Path to HotPotQA dataset (relative to working directory)
+    # This should point to your HotPotQA JSON file
+    path: "../hotpot/data/hotpot_dev_v1_simplified.json"
+    
+    # Dataset split to use
+    split: "dev"
+    
+    # Range of examples to process (reduced for debugging)
+    start_index: 0
+    end_index: 2
+  
+  # Task-specific parameters
+  params:
+    # Maximum steps per episode (matches original)
+    max_steps: 7
+    # Reward calculation method
+    reward_type: "f1_score"
+    # Use exact match for success determination
+    success_metric: "em"
+
+# Tool Configuration  
+tools:
+  # List of enabled tools for this task
+  enabled_tools:
+    - "search"      # Wikipedia search
+    - "lookup"      # Keyword lookup in current page  
+    - "finish"      # Submit final answer
+  
+  # Wikipedia-specific settings
+  wikipedia:
+    # Wikipedia API endpoint
+    api_url: "https://en.wikipedia.org/w/api.php"
+    # Request timeout for Wikipedia calls
+    timeout: 10
+    # Cache search results to avoid repeated calls
+    cache_results: true
+    # Maximum number of cached pages
+    max_cache_size: 100
+  
+  # Directory for custom tools (if any)
+  custom_tools_dir: "tools/custom_tools"
+
+# Logging Configuration
+logging:
+  # Log level for debugging: DEBUG shows all details
+  level: "INFO"
+  
+  # Log file path (will be created if doesn't exist)
+  file: "logs/hotpotqa_lats.log"
+  
+  # Console logging settings
+  console:
+    enabled: true
+    level: "INFO"
+  
+  # Log message format
+  format: "%(asctime)s - %(name)s - %(levelname)s - %(filename)s:%(lineno)d - %(message)s"
+
+# Output Configuration
+output:
+  # Save detailed trajectory information
+  save_trajectories: true
+  trajectories_dir: "output/trajectories"
+  
+  # Save search tree visualizations
+  save_tree_viz: true
+  tree_viz_dir: "output/visualizations"
+  
+  # Save summary statistics
+  save_stats: true
+  stats_file: "output/run_statistics.json"
+  
+  # Metrics to track and report
+  metrics:
+    - "accuracy"        # Overall accuracy
+    - "em"             # Exact match
+    - "f1"             # F1 score
+    - "precision"      # Precision
+    - "recall"         # Recall
+    - "tokens_used"    # Total tokens consumed
+    - "api_calls"      # Number of API calls made
+    - "search_time"    # Time spent on search
+    - "avg_iterations" # Average iterations per question
+
+# Prompt Configuration (optional - uses task defaults if not specified)
+prompts:
+  # Path to prompts file (optional)
+  config_file: "config/examples/hotpotqa_prompts.yaml"

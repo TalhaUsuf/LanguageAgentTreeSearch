@@ -20,3 +20,4 @@ pandas==2.0.3
 gym
 transformers
 beautifulsoup4
+loguru

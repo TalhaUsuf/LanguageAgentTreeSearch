@@ -119,6 +119,29 @@ sh lats.sh
 ## Trajectories
 ``programming/root/`` contains all the trajectories from the paper's experiments on programming. Please use get_acc.py with the log path to get the actual accuracy. HotPotQA and WebShop logs were too large to upload, feel free to email if interested.
 
+## Changelog
+
+### [1.1.0] - 2025-09-12
+#### Added
+- **Comprehensive Logging System**: Loguru-based logging configuration with colored console output (INFO level) and detailed file logging (DEBUG level) in `hotpot/logger_config.py`
+- **Trajectory Saving Utilities**: Complete trajectory export system in `hotpot/trajectory_saver.py` with JSON and JSONL formats for training data
+- **Context-Aware Debugging**: Iteration and node depth tracking throughout LATS algorithm execution
+- **Training Data Export**: Automatic generation of LLM training data in standard instruction-input-output format
+- **Performance Monitoring**: Success/failure tracking with detailed statistics and progress indicators
+- **Automated Directory Management**: Automatic creation of `/logs/` and `/trajs/` directories for organized data storage
+
+#### Enhanced
+- **LATS Algorithm**: Enhanced `hotpot/lats.py` with comprehensive debug logging including node selection, value computation, trajectory backpropagation, and success/failure state tracking
+- **Experiment Runner**: Updated `hotpot/run.py` with new logging system, per-question progress tracking, final results summary, and automatic trajectory file saving
+- **Debug Scripts**: Updated `hotpot/debug_quick.sh` with reduced iterations (5) for faster debugging cycles
+
+#### Technical Features
+- **Colored Console Output**: Green timestamps and colored log levels for better development experience
+- **File Logging**: DEBUG level with comprehensive details including iteration and node depth context
+- **Trajectory Formats**: Both analysis-ready JSON with metadata and training-ready JSONL formats
+- **Log Rotation**: Automatic log rotation (10MB) with 7-day retention policy
+- **Backward Compatibility**: All enhancements maintain full compatibility with existing codebase
+
 ## Citations
 Please cite the paper and star this repo if you use LATS and find it interesting. Feel free to contact andyz3@illinois.edu or open an issue if you have any questions.
 

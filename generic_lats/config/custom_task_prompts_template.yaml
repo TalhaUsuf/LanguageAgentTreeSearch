@@ -1,0 +1,194 @@
+# Custom Task Prompts Template
+# Use this template to create prompts for any domain with any set of tools
+# Replace the example tools and domains with your specific use case
+
+prompts:
+  # System prompt - Define the agent's role for your domain
+  # Variables: {tools_description}, {task_description}
+  system_prompt: |
+    You are an expert AI assistant specialized in [YOUR_DOMAIN] tasks.
+    
+    Your capabilities:
+    - Systematic problem-solving using available tools
+    - Multi-step reasoning and analysis
+    - Integration of information from multiple sources
+    
+    Available tools:
+    {tools_description}
+    
+    Task context:
+    {task_description}
+    
+    Always think step-by-step and use tools effectively to provide accurate, complete solutions.
+
+  # Main chain-of-thought prompt with domain-specific examples
+  # Variables: {examples}, {tools}, {input}, {trajectory}
+  cot_prompt: |
+    Solve the {YOUR_DOMAIN} task step-by-step using interleaving Thought, Action, Observation steps.
+    
+    Available tools:
+    {tools}
+    
+    Guidelines for {YOUR_DOMAIN} tasks:
+    - [Add domain-specific guidelines, e.g., "Always validate data before processing"]
+    - [Add tool usage patterns, e.g., "Use database queries before calculations"]
+    - [Add quality criteria, e.g., "Ensure accuracy by cross-referencing sources"]
+    
+    Here are examples showing different tool usage patterns for {YOUR_DOMAIN}:
+    {examples}
+    
+    Current task:
+    Task: {input}
+    {trajectory}
+    
+    Provide your next Thought and Action:
+
+  # Short prompt for quick interactions
+  cot_prompt_short: |
+    Solve this {YOUR_DOMAIN} task using the available tools:
+    
+    Tools: {tools}
+    
+    Task: {input}
+    Progress: {trajectory}
+    
+    Next step?
+
+  # Domain-specific value evaluation
+  value_prompt: |
+    Evaluate progress on this {YOUR_DOMAIN} task:
+    
+    Task: {question}
+    Current state: {state}
+    Progress: {trajectory}
+    
+    {YOUR_DOMAIN}-specific evaluation criteria:
+    1. [Criterion 1, e.g., "Data quality and completeness"]
+    2. [Criterion 2, e.g., "Analytical approach appropriateness"] 
+    3. [Criterion 3, e.g., "Integration of multiple information sources"]
+    4. [Criterion 4, e.g., "Alignment with domain best practices"]
+    
+    Rate likelihood of success (0-10):
+
+  # Domain-specific reflection prompt
+  reflection_prompt: |
+    Analyze this failed {YOUR_DOMAIN} attempt:
+    
+    Task: {question}
+    Failed approach: {trajectory}
+    Result: {answer}
+    Expected: {correct_answer}
+    
+    Common {YOUR_DOMAIN} failure patterns:
+    - [Pattern 1, e.g., "Insufficient data validation"]
+    - [Pattern 2, e.g., "Wrong tool sequence"]
+    - [Pattern 3, e.g., "Premature conclusion without verification"]
+    
+    Diagnose the failure and suggest improvement:
+
+  # Examples section - Replace with your domain-specific examples
+  examples:
+    # Example 1: Financial Data Analysis with Database Integration
+    - pattern: "financial_analysis"
+      question: "Calculate the quarterly profit margin for the retail division and compare it to industry benchmarks."
+      trajectory: |
+        Thought 1: I need to get quarterly revenue and cost data for the retail division, then calculate profit margin and compare to industry data.
+        Action 1: database_query[SELECT quarter, revenue, total_costs FROM financial_data WHERE division='retail' AND year=2024]
+        Observation 1: Q1: Revenue $2.5M, Costs $1.8M; Q2: Revenue $2.8M, Costs $2.0M; Q3: Revenue $3.1M, Costs $2.2M; Q4: Revenue $2.9M, Costs $2.1M
+        Thought 2: Now I'll calculate profit margins for each quarter.
+        Action 2: calculate[profit_margin_by_quarter: Q1=(2.5-1.8)/2.5*100, Q2=(2.8-2.0)/2.8*100, Q3=(3.1-2.2)/3.1*100, Q4=(2.9-2.1)/2.9*100]
+        Observation 2: Profit margins - Q1: 28%, Q2: 28.6%, Q3: 29%, Q4: 27.6%. Average: 28.3%
+        Thought 3: I need industry benchmark data for retail profit margins to make the comparison.
+        Action 3: market_data_api[get_industry_benchmark, sector='retail', metric='profit_margin', period='quarterly_2024']
+        Observation 3: Industry average retail profit margin: Q1: 24.2%, Q2: 25.1%, Q3: 26.3%, Q4: 24.8%. Industry average: 25.1%
+        Thought 4: Our retail division outperformed industry benchmarks in all quarters.
+        Action 4: finish[Retail division quarterly profit margins: Q1: 28%, Q2: 28.6%, Q3: 29%, Q4: 27.6% (avg: 28.3%). Consistently outperformed industry average of 25.1% by 3.2 percentage points.]
+
+    # Example 2: Multi-source Customer Research and Analysis
+    - pattern: "customer_research"  
+      question: "Analyze customer sentiment about our new product launch across social media, reviews, and support tickets to identify key improvement areas."
+      trajectory: |
+        Thought 1: I need to gather sentiment data from multiple sources - social media, product reviews, and support tickets - then analyze for patterns.
+        Action 1: social_media_api[get_mentions, product='new_product_launch', platforms=['twitter','facebook','instagram'], timeframe='last_30_days']
+        Observation 1: Found 1,247 mentions. Sentiment breakdown: 52% positive, 31% neutral, 17% negative. Key topics: ease of use (+), price (-), customer support (-)
+        Thought 2: Let me get detailed review data from our e-commerce platform and review sites.
+        Action 2: review_scraper[product_id='NPL2024', sources=['amazon','company_website','trustpilot'], limit=500]
+        Observation 2: 487 reviews analyzed. Average rating: 3.8/5. Positive: UI design, features. Negative: setup complexity (23%), pricing (18%), documentation (15%)
+        Thought 3: Now I need support ticket data to understand customer pain points requiring assistance.
+        Action 3: support_system_api[query_tickets, product='new_product_launch', date_range='last_30_days', include_resolution_time=true]
+        Observation 3: 89 support tickets. Top issues: Installation problems (34%), billing questions (22%), feature confusion (19%). Avg resolution time: 2.3 days
+        Thought 4: Let me synthesize this data to identify the key improvement areas across all channels.
+        Action 4: sentiment_analyzer[aggregate_insights, data_sources=['social_media','reviews','support_tickets']]
+        Observation 4: Cross-channel analysis reveals 3 critical areas: 1) Setup/installation complexity (mentioned in 34% of negative feedback), 2) Pricing transparency (18% of complaints), 3) Documentation clarity (15% of issues)
+        Thought 5: I have comprehensive multi-source analysis identifying clear improvement priorities.
+        Action 5: finish[Customer sentiment analysis across social media (1,247 mentions), reviews (487), and support tickets (89) reveals three key improvement areas: 1) Simplify setup/installation process (34% of negative feedback), 2) Improve pricing transparency (18% of complaints), 3) Enhance documentation clarity (15% of issues). Overall sentiment: 52% positive, but setup complexity is the primary barrier to satisfaction.]
+
+    # Example 3: Healthcare Data Processing with Compliance Validation
+    - pattern: "healthcare_compliance"
+      question: "Process patient lab results, ensure HIPAA compliance, and generate summary report for the medical team while flagging any critical values."
+      trajectory: |
+        Thought 1: I need to process lab results while ensuring HIPAA compliance throughout. I'll start by validating the data access permissions.
+        Action 1: hipaa_validator[check_access_permissions, user_role='lab_technician', data_type='patient_lab_results']
+        Observation 1: Access validated. User authorized for lab result processing. Audit trail initiated. Data encryption: Active.
+        Thought 2: Now I can safely retrieve and process the lab results data.
+        Action 2: secure_database[get_lab_results, date_range='today', status='pending_review', anonymize_ids=true]
+        Observation 2: Retrieved 47 lab result sets. Patient identifiers anonymized as PT001-PT047. Standard panels: CBC, CMP, Lipid profile.
+        Thought 3: I need to analyze results against normal ranges and flag critical values that require immediate attention.
+        Action 3: medical_analyzer[evaluate_lab_values, reference_ranges='standard_adult', flag_critical=true]
+        Observation 3: Analysis complete. Normal: 39 patients, Abnormal non-critical: 6 patients, Critical values flagged: 2 patients (PT023: glucose 380 mg/dL, PT031: potassium 2.1 mEq/L)
+        Thought 4: Critical values need immediate notification. Let me trigger the alert system while maintaining compliance.
+        Action 4: critical_alert_system[notify_medical_team, patient_ids=['PT023','PT031'], alert_type='critical_lab_values', include_hipaa_compliant_summary=true]
+        Observation 4: Critical alerts sent to on-call physician Dr. Smith and charge nurse. Notifications comply with minimum necessary standard. Response acknowledgment required.
+        Thought 5: Now I'll generate the comprehensive summary report for the medical team.
+        Action 5: report_generator[create_lab_summary, include_critical_flags=true, anonymized=true, format='medical_team_briefing']
+        Observation 5: Report generated. Summary: 47 patients processed, 2 critical alerts (4.3% rate), 6 abnormal non-critical (12.8% rate), 39 normal results (83% rate). Report saved to secure server with audit logging.
+        Thought 6: All processing complete with full HIPAA compliance maintained throughout.
+        Action 6: finish[Processed 47 patient lab results with HIPAA compliance. Critical alerts issued for 2 patients requiring immediate attention (PT023: severe hyperglycemia, PT031: severe hypokalemia). Summary report generated for medical team showing 83% normal results, 12.8% non-critical abnormal, 4.3% critical values. All actions logged for audit compliance.]
+
+# Domain-specific tool categories (replace with your actual tools)
+tool_categories:
+  # Data Access & Retrieval
+  data_access:
+    - "database_query"          # SQL database queries
+    - "file_read"              # Read files from filesystem
+    - "api_call"               # RESTful API requests
+    - "secure_database"        # HIPAA-compliant database access
+    - "document_search"        # Search through document repositories
+  
+  # Analysis & Processing  
+  analysis:
+    - "calculate"              # Mathematical calculations
+    - "sentiment_analyzer"     # Text sentiment analysis
+    - "medical_analyzer"       # Healthcare-specific analysis
+    - "financial_calculator"   # Financial metrics and ratios
+    - "data_processor"         # General data transformation
+  
+  # External Services
+  external_apis:
+    - "social_media_api"       # Social media platform APIs
+    - "market_data_api"        # Financial/market data services
+    - "weather_api"            # Weather information services
+    - "review_scraper"         # Review aggregation services
+    - "support_system_api"     # Customer support systems
+  
+  # Compliance & Security
+  compliance:
+    - "hipaa_validator"        # HIPAA compliance checking
+    - "data_anonymizer"        # PII data anonymization
+    - "audit_logger"           # Compliance audit logging
+    - "access_validator"       # Permission validation
+  
+  # Reporting & Communication
+  output:
+    - "report_generator"       # Automated report creation
+    - "critical_alert_system"  # Priority alert notifications
+    - "chart_creator"          # Data visualization
+    - "email_sender"           # Email notifications
+
+# Usage instructions:
+# 1. Replace [YOUR_DOMAIN] with your specific domain (e.g., "financial analysis", "medical diagnosis")
+# 2. Replace [your_tool_X] with your actual tool names
+# 3. Update examples to reflect realistic scenarios in your domain
+# 4. Modify evaluation criteria to match your domain's success metrics
+# 5. Add domain-specific guidelines and best practices
+# 6. Test with your specific tool set to ensure examples work correctly
