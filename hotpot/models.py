@@ -42,10 +42,10 @@ if llm2use == "openai":
 elif llm2use == "custom":
     logger.info(f"Using Custom LLM")
     api_key = os.getenv("OPENAI_API_KEY", "")
-    api_base = os.getenv("OPENAI_API_BASE", "http://69.48.159.10:30003/v1")
+    api_base = os.getenv("OPENAI_API_BASE", "http://your-llm-server:port/v1")
     model = os.getenv("OPENAI_MODEL", "meta-llama/Meta-Llama-3.1-70B-Instruct")
 
-    logger.debug(f"LLM API Base: {api_base}, Model: {model}")
+    logger.debug(f"LLM Model: {model}")
 
 else:
     logger.error(f"Invalid LLM: {llm2use}, can only be openai or custom")

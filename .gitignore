@@ -14,3 +14,5 @@ hotpot/hotpot_models.log
 hotpot/models.log
 debug.ipynb
 *.log
+.claude
+generic_lats/output/

@@ -8,19 +8,19 @@ llm:
   
   # Base URL for your LLM API endpoint
   # Default points to the environment variable set in debug_quick.sh
-  base_url: "${OPENAI_API_BASE:http://69.48.159.10:30000/v1}"
+  base_url: "${OPENAI_API_BASE:http://your-llm-server:port/v1}"
   
   # Model name - should match what your API expects
   model: "${OPENAI_MODEL:llama-3.1-70b}"
   
   # API key (optional if your endpoint doesn't require it)
-  api_key: "${OPENAI_API_KEY:}"
+  api_key: "${OPENAI_API_KEY:your-api-key-here}"
   
   # Temperature for text generation (0.0 = deterministic, 2.0 = very random)
-  temperature: 1.0
+  temperature: 0.7
   
   # Maximum tokens per generation request
-  max_tokens: 500
+  max_tokens: 1000
   
   # Request timeout in seconds
   timeout: 60

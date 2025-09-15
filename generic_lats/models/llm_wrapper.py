@@ -167,6 +167,7 @@ class LangChainLLM:
         for _ in range(n):
             try:
                 # Create a new LLM instance with updated parameters
+                # import pdb; pdb.set_trace()
                 temp_llm = self.llm.__class__(
                     **{**self.llm.__dict__, **generation_params, 'callbacks': [self.callback]}
                 )

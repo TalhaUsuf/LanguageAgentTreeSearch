@@ -26,6 +26,51 @@ The Generic LATS Framework transforms the original HotPotQA-specific implementat
 - ✅ **Prompt Diversity**: 44.8% variation across domains showing dynamic adaptation
 - ✅ **Custom Templates**: 5 diverse tool types demonstrated in examples
 
+## 🔄 Changelog
+
+### v1.1.1 - Security Patch (2025-09-15)
+
+**🔒 Security:**
+- Removed hardcoded API base URL exposing private endpoint (http://69.48.159.10:30000/v1)
+- Cleaned up exposed dummy API keys and replaced with secure environment variable placeholders
+- Removed sensitive data from debug logging to prevent credential leakage
+- Updated configuration files to use proper environment variable syntax for security
+
+**📁 Files Secured:**
+- `examples/custom_task_template.py`: Removed hardcoded API base URL
+- `config/examples/hotpotqa_config.yaml`: Updated to use environment variables
+- `hotpot/models.py`: Removed API endpoint from debug logs
+- `hotpot/debug_quick.sh`: Cleaned up exposed credentials
+- `sample.env`: Updated with generic placeholders for secure configuration
+
+**🛡️ Security Improvements:**
+- ✅ All hardcoded API endpoints removed from 5 files
+- ✅ Environment-based configuration enforced throughout codebase
+- ✅ Debug logs sanitized to prevent credential exposure
+- ✅ Generic placeholders implemented for secure setup
+- ✅ Maintains full functionality while following security best practices
+
+### v1.1.0 - Pydantic Compatibility Fix (2025-09-15)
+
+**🐛 Bug Fixes:**
+- Fixed Pydantic field initialization error in `WikipediaSearchTool` and `WikipediaLookupTool`
+- Replaced instance attribute assignments in `__init__` with proper Pydantic field declarations
+- Added proper type hints and `Field()` declarations for all tool instance variables
+
+**📁 Files Changed:**
+- `tools/wikipedia_tools.py`: Updated both Wikipedia tool classes to use Pydantic fields
+
+**🧪 Validation:**
+- ✅ `WikipediaSearchTool` can now be instantiated without field errors
+- ✅ `WikipediaLookupTool` can now be instantiated without field errors  
+- ✅ HotPotQA example runs successfully with proper tool registration
+- ✅ All field access (`search_time`, `cache`, `current_page`, etc.) working correctly
+
+**🔧 Technical Details:**
+- Changed from `self.search_time = 0` to `search_time: float = Field(default=0.0, init=False)`
+- Added proper imports: `from typing import Dict` and `from pydantic import Field`
+- Maintains backward compatibility with existing tool functionality
+
 ### 🚀 Key Features
 
 - **🌍 Domain Agnostic**: Works with databases, APIs, calculations, compliance tools, etc.
@@ -80,7 +125,7 @@ pip install -r requirements.txt
 
 ```bash
 # Set up environment variables (matching your original setup)
-export OPENAI_API_BASE="http://69.48.159.10:30000/v1"
+export OPENAI_API_BASE="http://your-llm-server:port/v1"
 export OPENAI_MODEL="llama-3.1-70b"
 
 # Run single question

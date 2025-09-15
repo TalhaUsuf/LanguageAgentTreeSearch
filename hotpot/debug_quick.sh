@@ -8,7 +8,7 @@ echo "========================="
 
 # Set environment variables
 export LLM=custom
-export OPENAI_API_BASE=http://69.48.159.10:30000/v1
+export OPENAI_API_BASE=http://your-llm-server:port/v1
 export OPENAI_MODEL=llama-3.1-70b
 
 echo "🌐 Environment:"

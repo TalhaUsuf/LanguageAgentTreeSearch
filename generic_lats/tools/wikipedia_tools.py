@@ -5,9 +5,10 @@ Wikipedia tools for Generic LATS framework, ported from original implementation.
 import logging
 import time
 import requests
-from typing import Optional, Any, List
+from typing import Optional, Any, List, Dict
 from bs4 import BeautifulSoup
 from langchain.tools import BaseTool
+from pydantic import Field
 
 logger = logging.getLogger(__name__)
 
@@ -32,11 +33,10 @@ class WikipediaSearchTool(BaseTool):
     description: str = """Search for an entity on Wikipedia and return the first paragraph if it exists. 
     If not found, returns similar entities to search. Usage: Search[entity_name]"""
     
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-        self.search_time = 0
-        self.num_searches = 0
-        self.cache = {}
+    # Declare fields with proper Pydantic syntax
+    search_time: float = Field(default=0.0, init=False)
+    num_searches: int = Field(default=0, init=False)
+    cache: Dict[str, str] = Field(default_factory=dict, init=False)
     
     def _run(self, entity: str, run_manager: Optional[Any] = None) -> str:
         """
@@ -182,12 +182,11 @@ class WikipediaLookupTool(BaseTool):
     description: str = """Look up a keyword in the current Wikipedia page and return the next sentence 
     containing that keyword. Usage: Lookup[keyword]"""
     
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-        self.current_page = None
-        self.lookup_keyword = None
-        self.lookup_list = None
-        self.lookup_cnt = None
+    # Declare fields with proper Pydantic syntax
+    current_page: Optional[str] = Field(default=None, init=False)
+    lookup_keyword: Optional[str] = Field(default=None, init=False)
+    lookup_list: Optional[List[str]] = Field(default=None, init=False)
+    lookup_cnt: Optional[int] = Field(default=None, init=False)
     
     def _run(self, keyword: str, run_manager: Optional[Any] = None) -> str:
         """

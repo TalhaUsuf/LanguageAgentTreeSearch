@@ -389,7 +389,7 @@ def run_custom_task():
             'llm': {
                 'provider': 'openai-compatible',
                 'model': 'llama-3.1-70b',
-                'base_url': 'http://69.48.159.10:30000/v1',
+                'base_url': 'http://your-llm-server:port/v1',
                 'api_key': '',
                 'temperature': 1.0,
                 'max_tokens': 500

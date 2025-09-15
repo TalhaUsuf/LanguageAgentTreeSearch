@@ -7,8 +7,8 @@ llm:
   provider: "openai-compatible"
   
   # Base URL for API endpoint (use environment variable substitution)
-  # For OpenAI: https://api.openai.com/v1
-  # For local/custom: your endpoint URL
+  # For OpenAI-compatible APIs: set OPENAI_API_BASE to your endpoint
+  # For local/custom: set to your endpoint URL
   base_url: "${OPENAI_API_BASE}"
   
   # Model name/identifier
